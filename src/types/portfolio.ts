@@ -46,6 +46,19 @@ export interface Experience {
   order: number
 }
 
+export interface ProjectMedia {
+  id: number
+  project: number
+  media_type: 'IMAGE' | 'GIF'
+  media_type_display?: string
+  file_url: string
+  storage_path: string
+  caption: string
+  order: number
+  is_cover: boolean
+  created_at?: string
+}
+
 export interface Project {
   id: number
   title: string
@@ -55,6 +68,7 @@ export interface Project {
   category: string
   cover_image: string
   gallery: string[]
+  media_items?: ProjectMedia[]
   tech_stack: string[]
   repo_url: string
   demo_url: string

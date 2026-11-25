@@ -97,6 +97,16 @@ class HttpClient {
   async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return (await this.client.delete(url, config)) as T
   }
+
+  async postFormData<T>(url: string, formData: FormData, config?: AxiosRequestConfig): Promise<T> {
+    return (await this.client.post(url, formData, {
+      ...config,
+      headers: {
+        ...config?.headers,
+        'Content-Type': 'multipart/form-data',
+      },
+    })) as T
+  }
 }
 
 export const http = HttpClient.getInstance()

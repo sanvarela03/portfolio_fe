@@ -4,6 +4,7 @@ import type {
   Skill,
   Experience,
   Project,
+  ProjectMedia,
   BlogPost,
   ContactMessage,
   DashboardStats,
@@ -44,6 +45,19 @@ export const portfolioService = {
   updateProject: (slugOrId: string | number, payload: Partial<Project>) =>
     http.patch<Project>(`/api/v1/portfolio/projects/${slugOrId}/`, payload),
   deleteProject: (slugOrId: string | number) => http.delete(`/api/v1/portfolio/projects/${slugOrId}/`),
+  uploadProjectMedia: (slugOrId: string | number, files: File[], caption = '', isCover = false) => {
+    const fd = new FormData()
+    for (const f of files) {
+      fd.append('files', f)
+    }
+    if (caption) fd.append('caption', caption)
+    fd.append('is_cover', String(isCover))
+    return http.postFormData<ProjectMedia[]>(`/api/v1/portfolio/projects/${slugOrId}/upload-media/`, fd)
+  },
+  updateProjectMedia: (slugOrId: string | number, mediaId: number, payload: Partial<ProjectMedia>) =>
+    http.patch<ProjectMedia>(`/api/v1/portfolio/projects/${slugOrId}/media/${mediaId}/`, payload),
+  deleteProjectMedia: (slugOrId: string | number, mediaId: number) =>
+    http.delete(`/api/v1/portfolio/projects/${slugOrId}/media/${mediaId}/`),
 
   // Blog
   getPosts: async (params?: Record<string, any>) =>
