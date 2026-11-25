@@ -1,0 +1,103 @@
+import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios'
+import storage from './storage'
+
+class HttpClient {
+  private static instance: HttpClient
+  private client: AxiosInstance
+  public baseUrl: string
+
+  constructor() {
+    const isProd = import.meta.env.PROD
+    const localUrl = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8000'
+    const remoteUrl =
+      import.meta.env.VITE_API_URL_REMOTE ||
+      import.meta.env.VITE_DEFAULT_API_URL ||
+      'https://portfolio-be-sanvarela03.onrender.com'
+
+    this.baseUrl = isProd ? remoteUrl : localUrl
+
+    this.client = axios.create({
+      baseURL: this.baseUrl,
+      timeout: 30000,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    })
+
+    this.setupInterceptors()
+  }
+
+  public static getInstance(): HttpClient {
+    if (!HttpClient.instance) {
+      HttpClient.instance = new HttpClient()
+    }
+    return HttpClient.instance
+  }
+
+  private setupInterceptors(): void {
+    // Interceptor de solicitud: inyecta Authorization: Token <key> (mismo patrón que lxia_fe)
+    this.client.interceptors.request.use(
+      (config) => {
+        const token = storage.getToken()
+        if (token && config.headers) {
+          config.headers.Authorization = `Token ${token}`
+        }
+        return config
+      },
+      (error) => Promise.reject(error)
+    )
+
+    // Interceptor de respuesta: normaliza errores de DRF y redirige en 401 en /admin
+    this.client.interceptors.response.use(
+      (response: AxiosResponse) => response.data,
+      (error) => {
+        if (error.response) {
+          const status = error.response.status
+          const data = error.response.data
+
+          if (status === 401 && window.location.pathname.startsWith('/admin')) {
+            storage.clearAuth()
+            window.location.href = '/login?expired=1'
+          }
+
+          const message =
+            data?.detail ||
+            data?.error ||
+            (typeof data === 'string' ? data : null) ||
+            (data ? Object.values(data).flat().join(' ') : 'Error inesperado del servidor')
+
+          return Promise.reject(new Error(message))
+        } else if (error.request) {
+          return Promise.reject(
+            new Error('No fue posible comunicarse con el servidor backend. Intenta nuevamente en unos segundos.')
+          )
+        }
+        return Promise.reject(error)
+      }
+    )
+  }
+
+  async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return (await this.client.get(url, config)) as T
+  }
+
+  async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return (await this.client.post(url, data, config)) as T
+  }
+
+  async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return (await this.client.put(url, data, config)) as T
+  }
+
+  async patch<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+    return (await this.client.patch(url, data, config)) as T
+  }
+
+  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return (await this.client.delete(url, config)) as T
+  }
+}
+
+export const http = HttpClient.getInstance()
+export default http
